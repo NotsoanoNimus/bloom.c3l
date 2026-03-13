@@ -1,0 +1,44 @@
+# bloom.c3l - Universal Bloom Filters &amp; Extensions for the C3 Language
+
+A [Bloom Filter](https://en.wikipedia.org/wiki/Bloom_filter) is a universal data structure which uses hashing and bitsets to provide space-efficient, constant-time insertion and lookup.
+
+The key property of these filters is that set membership is evaluated as `definitely not in set` or `maybe in set`. For set lookups - e.g., some certificate's membership in a very long list of revoked fingerprints - getting a negative result can immediately and quickly stop any further operations without traversing the entire set.
+
+Another unique property is that lookups/insertions remain constant-time regardless of how many elements are already in the set.
+
+
+## Idiosyncrasies
+- From a usability perspective, with most filter sizes, bloom filters are almost always workable in-memory. Therefore, they can be flushed to long-term storage if and whenever _the developer_ chooses, not by the library itself in order to preserve some kind of interim state information.
+- Given an `n` (number of stored elements) of around 100 million, an assumption of about 10 bits allocated per expected `n` would result in a Bloom filter of only about `120 MiB` of data! Pretty great for input elements of _any given size_; when you consider even a `ulong` element type, this is a significant space-savings.
+- You cannot remove elements from an ordinary bloom filter, as the bits set to zero for one element may be shared by other elements in the set.
+- The hashing algorithm used by this library defaults to the C3 standard library's `a5hash` implementation, but that can be overridden by calling `bloom::set_hash_function`. The signature of the desired hash function _must_ match `fn ulong(char[] element, ulong hash_seed)` - AKA, the `BloomHashFn` type.
+
+
+# Usage
+The core `BloomFilter` structure provides the following API methods to use:
+- `init` - create a new filter
+- `copy` - spawn an in-memory copy of the filter and its meta-data
+- `export` - marshal the filter and meta-data into a binary blob that can be saved to a file and reimported
+- `import` - create a filter from an `export` blob
+- `free` - deallocate a filter
+- `insert` - add a new element to the filter
+- `contains` - query whether the element likely exists in the set
+
+Any supplemental bloom filter types - e.g., counting bloom filters - will have similar methods exposed.
+
+### Making a new filter
+Creation of a new filter expects foreknowledge of:
+- a maximum elements count `n` as a `usz`
+- a desired false-positive rate as a non-zero `double` value, 0 < `e` < 1
+
+### Inserting elements
+//
+
+### Lookups
+//
+
+### Approximating the stored element count
+//
+
+### Saving filters or accessing raw filter data
+//
