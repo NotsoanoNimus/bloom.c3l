@@ -1,3 +1,4 @@
 testrun
 test_*
+test/int/artifacts
 *.bloom

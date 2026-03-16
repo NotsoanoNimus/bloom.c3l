@@ -22,7 +22,7 @@ fn void AllocatedBitSet.init(&self, Allocator allocator, usz bits)
 		.allocator = allocator,
 		.initialized = true,
 		.data = data,
-		.bits = size,
+		.bits = bits,
 	};
 }
 
