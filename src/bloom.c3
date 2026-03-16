@@ -5,20 +5,24 @@ module bloom;
 
 import std::collections::allocatedbitset, std::hash, std::math;
 
-fn usz m(usz n, double e) => (usz)math::ceil(n * (-math::ln(e) / math::pow(math::ln(2), 2)));
-fn usz k(usz m, usz n) => (usz)math::ceil(((double)m / (double)n) * math::ln(2));
+fn usz target_bitsize(usz n, double e)
+{
+	usz m = (usz)math::ceil(n * (-math::ln(e) / math::pow(math::ln(2), 2)));
+	if (m % 8 != 0) m += 8 - (m % 8);   // round up to the nearest byte boundary
+	assert (m % 8 == 0);
+	return m;
+}
+fn usz target_hash_funcs(usz m, usz n) => (usz)math::ceil(((double)m / (double)n) * math::ln(2));
 
 <* Used to hash incoming elements for placement into the Bloom Filter. *>
 alias BloomHashFn = fn ulong(char[], ulong);
 
 struct BloomFilter
 {
-	bool initialized;
+	bool initialized;   // acts as a "dirty" flag, indicating the filter was properly init'd
 	AllocatedBitSet set;
 	BloomHashFn hash_fn;
-	double false_positive_rate;   // e
-	usz bits_required;   // m
-	usz upper_bound;   // n
+	usz bits;   // m
 	usz rounds;   // k
 }
 
@@ -28,18 +32,46 @@ struct BloomFilter
 *>
 fn BloomFilter create(Allocator allocator, usz upper_bound, double false_positive_rate = 0.01, BloomHashFn hash = &a5hash::hash)
 {
+	usz bitsize = target_bitsize(upper_bound, false_positive_rate);
 	BloomFilter filter = {
 		.initialized = true,
 		.hash_fn = hash,
-		.false_positive_rate = false_positive_rate,
-		.bits_required = m(upper_bound, false_positive_rate),
-		.upper_bound = upper_bound,
+		.bits = bitsize,
+		.rounds = target_hash_funcs(bitsize, upper_bound)
 	};
-	filter.rounds = k(filter.bits_required, upper_bound);
-	filter.set.init(allocator, filter.bits_required);
-
+	filter.set.init(allocator, filter.bits);
 	return filter;
 }
+
+<*
+ Import a bloom filter from a raw array of bytes. This requires foreknowledge of the right hash
+ function and round count which was used to create the incoming filter data.
+
+ @require filter_raw.len > 0 : "You cannot create a bloom filter from an empty byte array. Use `create` instead."
+ @require hash_rounds > 0 : "All bloom filters must use at least 1 hash round."
+ *>
+fn BloomFilter from(Allocator allocator, char[] filter_raw, usz hash_rounds, BloomHashFn hash = &a5hash::hash)
+{
+	BloomFilter filter = {
+		.initialized = true,
+		.hash_fn = hash,
+		.bits = filter_raw.len << 3,
+		.rounds = hash_rounds,
+	};
+	filter.set.init(allocator, filter.bits);
+	filter.raw()[:filter_raw.len] = filter_raw[..];   // copy into bytes allocated by the bitset
+	return filter;
+}
+
+<*
+ Create a copy of a bloom filter in-memory and return the new structure.
+
+ @param [&inout] allocator : "The allocator to use when copying the filter."
+*>
+fn BloomFilter BloomFilter.copy(&self, Allocator allocator) => {
+	...*self,
+	.set = self.set.copy(allocator),
+};
 
 <*
  Release all resources used by the bloom filter and zeroize the struct.
@@ -51,7 +83,7 @@ fn BloomFilter create(Allocator allocator, usz upper_bound, double false_positiv
 fn void BloomFilter.free(&self, bool zeroize_filter_contents = false)
 {
 	if (zeroize_filter_contents) mem::zero_volatile(self.raw());
-	self.set.free();
+	if (self.initialized) self.set.free();
 	mem::zero_volatile(@as_char_view(*self));
 }
 
@@ -62,10 +94,15 @@ fn void BloomFilter.free(&self, bool zeroize_filter_contents = false)
 *>
 fn usz BloomFilter.cardinality(&self)
 {
-	return (usz)math::ceil(-((double)self.bits_required / (double)self.rounds) * math::ln(1.0d - ((double)self.set.cardinality() / (double)self.bits_required)));
+	return (usz)math::ceil(-((double)self.bits / (double)self.rounds) * math::ln(1.0d - ((double)self.set.cardinality() / (double)self.bits)));
 }
 
-macro usz _bitpos(self, char[] element, ulong seed) @local => (usz)(self.hash_fn(element, seed) % self.bits_required);
+<*
+ @require self.initialized : "The bloom filter must be initialized first."
+*>
+fn char[] BloomFilter.raw(&self) => ((char*)self.set.data.ptr)[:self.set.bits >> 3];
+
+macro usz _bitpos(self, char[] element, ulong seed) @local => (usz)(self.hash_fn(element, seed) % self.bits);
 
 <*
  @require self.initialized : "The bloom filter must be initialized first."
@@ -86,8 +123,3 @@ fn bool BloomFilter.contains(&self, char[] element)
 	}
 	return true;
 }
-
-<*
- @require self.initialized : "The bloom filter must be initialized first."
-*>
-fn char[] BloomFilter.raw(&self) => ((char*)self.set.data.ptr)[:self.set.bits >> 3];

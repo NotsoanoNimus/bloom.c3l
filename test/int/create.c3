@@ -20,7 +20,7 @@ fn void? BloomFilter.check_phrase(&self, String phrase, bool expected = true) =>
 		io::eprintfn(expected ? "MISSING: '%s'" : "UNEXPECTED: '%s'", phrase);
 		return NOT_FOUND~;
 	}
-	io::printfn("---> SUCCESS: phrase '%s' %s.", phrase, expected ? "MAY EXIST in the set" : "is NOT PRESENT in set");
+	io::printfn("---> SUCCESS: phrase '%s' %s.", phrase, expected ? "PROBABLY EXISTS in the set" : "is NOT PRESENT in set");
 }
 
 fn void ingest_helper(BloomFilter* into, String contents, usz span) @local => @pool()
@@ -48,6 +48,12 @@ fn void ingest_words(BloomFilter* into, String filename)
 
 fn int main() => @pool()
 {
+	if (file::exists("shakespeare.bloom") && file::exists("sherlock.bloom"))
+	{
+		io::printfn("~~ Filters are already generated. Exiting early. ~~");
+		return 0;
+	}
+
 	io::printfn("~~ INITIALIZING SHAKESPEARE FILTER SPACE ~~");
 	BloomFilter shakespeare_filter = bloom::create(tmem, 10_000_000, 0.000500011);
 	io::printfn("~~ INGESTING SHAKESPEARE TEXT ~~");
@@ -76,5 +82,8 @@ fn int main() => @pool()
 	sherlock_filter.check_phrase("C3 has great capabilities", expected: false)!!;
 
 	io::printfn("~~ EXPORTING FILTERS ~~");
+	file::save("shakespeare.bloom", shakespeare_filter.raw())!!;
+	file::save("sherlock.bloom", sherlock_filter.raw())!!;
+
 	return 0;
 }

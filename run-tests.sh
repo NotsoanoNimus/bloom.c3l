@@ -1,6 +1,9 @@
 #!/bin/bash
 #
-# Tests run with Stockfish by default. The submodule should always remain pinned to a stable release.
+# Test bloom filters library.
+#   First, unit tests are always run.
+#   Then, on the first test run, some testing artifacts are decompressed and a few static bloom filters are generated from this data.
+#   Finally, on each run, the static filters will be imported and tested just a biiiiit more thoroughly.
 #
 #
 TEST_OPTS="-O${1:-0} --libdir .. --lib bloom"
@@ -17,6 +20,3 @@ for x in `find ./test/int/ -maxdepth 1 -type f -name '*.c3'`; do
 	c3c compile-run ${TEST_OPTS} $x -- "${NON_INTERACTIVE:-yes}" \
 		|| { echo "Integration test '$(basename "$x")' failed. Aborting." && exit 1; }
 done
-
-# TODO: Add `generate` tests to create Bloom filters from different inputs
-# TODO: Add `query` tests to read raw Bloom filter and immediately enable searching the text for 1- to 3-word phrases

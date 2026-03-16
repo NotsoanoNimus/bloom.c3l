@@ -1,4 +1,3 @@
-
 // Copyright (c) 2026 Zack Puhl <github@xmit.xyz>. All rights reserved.
 // Use of this source code is governed by the MIT license
 // a copy of which can be found in the repo's LICENSE file.
@@ -25,6 +24,13 @@ fn void AllocatedBitSet.init(&self, Allocator allocator, usz bits)
 		.bits = bits,
 	};
 }
+
+fn AllocatedBitSet AllocatedBitSet.copy(&self, Allocator allocator) => {
+	.allocator = allocator,
+	.initialized = true,
+	.data = allocator::clone_slice(allocator, self.data),
+	.bits = self.bits,
+};
 
 fn void AllocatedBitSet.free(&self)
 {
