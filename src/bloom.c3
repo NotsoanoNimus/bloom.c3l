@@ -30,9 +30,16 @@ struct BloomFilter
  @require upper_bound > 0 : "The upper bound must be an integer greater than 0."
  @require false_positive_rate > 0 && false_positive_rate < 1 : "The false-positive rate must be a percentage factor between 0 and 1."
 *>
-fn BloomFilter create(Allocator allocator, usz upper_bound, double false_positive_rate = 0.01, BloomHashFn hash = &a5hash::hash)
+macro BloomFilter create(Allocator allocator, usz upper_bound, double false_positive_rate = 0.01, BloomHashFn hash = &a5hash::hash)
+	=> _create_impl(allocator, upper_bound, false_positive_rate, hash);
+
+<*
+ @require upper_bound > 0 : "The upper bound must be an integer greater than 0."
+ @require false_positive_rate > 0 && false_positive_rate < 1 : "The false-positive rate must be a percentage factor between 0 and 1."
+*>
+fn BloomFilter _create_impl(Allocator allocator, usz upper_bound, double false_positive_rate = 0.01, BloomHashFn hash = &a5hash::hash, usz bucket_width = 1) @private
 {
-	usz bitsize = target_bitsize(upper_bound, false_positive_rate);
+	usz bitsize = target_bitsize(upper_bound, false_positive_rate) * bucket_width;
 	BloomFilter filter = {
 		.initialized = true,
 		.hash_fn = hash,
@@ -50,7 +57,7 @@ fn BloomFilter create(Allocator allocator, usz upper_bound, double false_positiv
  @require filter_raw.len > 0 : "You cannot create a bloom filter from an empty byte array. Use `create` instead."
  @require hash_rounds > 0 : "All bloom filters must use at least 1 hash round."
  *>
-fn BloomFilter from(Allocator allocator, char[] filter_raw, usz hash_rounds, BloomHashFn hash = &a5hash::hash)
+fn BloomFilter from_bytes(Allocator allocator, char[] filter_raw, usz hash_rounds, BloomHashFn hash = &a5hash::hash)
 {
 	BloomFilter filter = {
 		.initialized = true,

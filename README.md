@@ -17,7 +17,7 @@ Another unique property is that lookups/insertions remain constant-time regardle
 # Usage
 There are some important module-level functions exposed:
 - `create` - create a new filter instance and allocate necessary space
-- `from` - import a raw bloom filter from a byte array
+- `from_bytes` - import a raw bloom filter from a byte array
 
 The core `BloomFilter` structure provides the following methods:
 - `copy` - spawn an in-memory copy of the filter and its meta-data

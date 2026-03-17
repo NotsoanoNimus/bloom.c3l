@@ -16,7 +16,7 @@ if [[ ! -d test/int/artifacts ]]; then
 fi
 echo -e "\n\n\n===== Running integration tests..."
 # note: set env var NON_INTERACTIVE=yes to forego interacting with these test applications
-for x in `find ./test/int/ -maxdepth 1 -type f -name '*.c3'`; do
-	c3c compile-run ${TEST_OPTS} $x -- "${NON_INTERACTIVE:-yes}" \
+for x in `find ./test/int/ -maxdepth 1 -type f -name '*.c3' -not -name 'common.c3'`; do
+	c3c compile-run ${TEST_OPTS} $x ./test/int/common.c3 -- "${NON_INTERACTIVE:-yes}" \
 		|| { echo "Integration test '$(basename "$x")' failed. Aborting." && exit 1; }
 done
