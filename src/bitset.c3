@@ -16,7 +16,7 @@ struct AllocatedBitSet
 fn void AllocatedBitSet.init(&self, Allocator allocator, usz bits)
 {
 	usz size = (bits + BITS - 1) / BITS;
-	uint[] data = allocator::alloc_array(allocator, uint, size)[:size];
+	uint[] data = alloc::alloc_array(allocator, uint, size)[:size];
 	*self = {
 		.allocator = allocator,
 		.initialized = true,
@@ -28,13 +28,13 @@ fn void AllocatedBitSet.init(&self, Allocator allocator, usz bits)
 fn AllocatedBitSet AllocatedBitSet.copy(&self, Allocator allocator) => {
 	.allocator = allocator,
 	.initialized = true,
-	.data = allocator::clone_slice(allocator, self.data),
+	.data = alloc::clone_slice(allocator, self.data),
 	.bits = self.bits,
 };
 
 fn void AllocatedBitSet.free(&self)
 {
-	allocator::free(self.allocator, self.data.ptr);
+	alloc::free(self.allocator, self.data.ptr);
 	mem::zero_volatile(@as_char_view(*self));
 }
 
